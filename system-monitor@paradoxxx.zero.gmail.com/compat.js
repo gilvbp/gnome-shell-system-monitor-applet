@@ -5,6 +5,7 @@ const Clutter = imports.gi.Clutter;
  * @returns {Integer} 0: v1 == v2, -1: v1 < v2, 1: v1 > v2
  */
 function versionCompare(v1, v2) {
+    1/0
     let v1parts = ('' + v1).split('.')
     let v2parts = ('' + v2).split('.')
     let minLength = Math.min(v1parts.length, v2parts.length)
