@@ -21,34 +21,30 @@
 /* Ugly. This is here so that we don't crash old libnm-glib based shells unnecessarily
  * by loading the new libnm.so. Should go away eventually */
 
-var libnm_glib = imports.gi.GIRepository.Repository.get_default().is_registered('NMClient', '1.0');
+//var libnm_glib = imports.gi.GIRepository.Repository.get_default().is_registered('NMClient', '1.0');
+import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-var smDepsGtop = true;
-var smDepsNM = true;
-
-var Config = imports.misc.config;
-var Clutter = imports.gi.Clutter;
-var GLib = imports.gi.GLib;
-var GObject = imports.gi.GObject;
 var Lang = imports.lang;
 
-var Gio = imports.gi.Gio;
-var Shell = imports.gi.Shell;
-var St = imports.gi.St;
-const UPower = imports.gi.UPowerGlib;
-
-// const System = imports.system;
-var ModalDialog = imports.ui.modalDialog;
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import St from 'gi://Gio';
+import UPower from 'gi://UPowerGlib';
+import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Panel from 'resource:///org/gnome/shell/ui/panel.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 var ByteArray = imports.byteArray;
 
-var ExtensionSystem = imports.ui.extensionSystem;
-var ExtensionUtils = imports.misc.extensionUtils;
+import * as Convenience from './convenience.js';
+import * as Compat from './compat.js';
 
-var Me = ExtensionUtils.getCurrentExtension();
-var Convenience = Me.imports.convenience;
-var Compat = Me.imports.compat;
-
+var smDepsGtop = true;
+var smDepsNM = true;
 var Background, GTop, IconSize, Locale, MountsMonitor, NM, NetworkManager, Schema, StatusArea, Style, gc_timeout, menu_timeout;
 
 try {
@@ -66,15 +62,7 @@ try {
     smDepsNM = false;
 }
 
-const Main = imports.ui.main;
-const Panel = imports.ui.panel;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
 
-const Gettext = imports.gettext.domain('system-monitor');
-const Mainloop = imports.mainloop;
-const Util = imports.misc.util;
-const _ = Gettext.gettext;
 
 const MESSAGE = _('Dependencies Missing\n\
 Please install: \n\
@@ -88,9 +76,8 @@ gnome-system-monitor and libgtop, clutter and Network Manager gir bindings \n\
 // stale network shares will cause the shell to freeze, enable this with caution
 const ENABLE_NETWORK_DISK_USAGE = false;
 
-let extension = imports.misc.extensionUtils.getCurrentExtension();
-let metadata = extension.metadata;
-let shell_Version = Config.PACKAGE_VERSION;
+
+let metadata = this.metadata;
 
 Clutter.Actor.prototype.raise_top = function raise_top() {
     const parent = this.get_parent();
@@ -842,7 +829,7 @@ const TipBox = class SystemMonitor_TipBox {
         }
         this.tipmenu.open();
         if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
+            GLib.source_remove(this.in_to);
             this.in_to = 0;
         }
     }
@@ -852,11 +839,11 @@ const TipBox = class SystemMonitor_TipBox {
         }
         this.tipmenu.close();
         if (this.out_to) {
-            Mainloop.source_remove(this.out_to);
+            GLib.source_remove(this.out_to);
             this.out_to = 0;
         }
         if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
+            GLib.source_remove(this.in_to);
             this.in_to = 0;
         }
     }
@@ -868,32 +855,32 @@ const TipBox = class SystemMonitor_TipBox {
         }
 
         if (this.out_to) {
-            Mainloop.source_remove(this.out_to);
+            GLib.source_remove(this.out_to);
             this.out_to = 0;
         }
         if (!this.in_to) {
-            this.in_to = Mainloop.timeout_add(Schema.get_int('tooltip-delay-ms'),
+            this.in_to = GLib.timeout_add(Schema.get_int('tooltip-delay-ms'),
                 this.show_tip.bind(this));
         }
     }
     on_leave() {
         if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
+            GLib.source_remove(this.in_to);
             this.in_to = 0;
         }
         if (!this.out_to) {
-            this.out_to = Mainloop.timeout_add(Schema.get_int('tooltip-delay-ms'),
+            this.out_to = GLib.timeout_add(Schema.get_int('tooltip-delay-ms'),
                 this.hide_tip.bind(this));
         }
     }
     destroy() {
         if (this.in_to) {
-            Mainloop.source_remove(this.in_to);
+            GLib.source_remove(this.in_to);
             this.in_to = 0;
         }
 
         if (this.out_to) {
-            Mainloop.source_remove(this.out_to);
+            GLib.source_remove(this.out_to);
             this.out_to = 0;
         }
 
@@ -949,7 +936,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
             });
 
         this.interval = l_limit(Schema.get_int(this.elt + '-refresh-time'));
-        this.timeout = Mainloop.timeout_add(
+        this.timeout = GLib.timeout_add(
             this.interval,
             this.update.bind(this),
             GLib.PRIORITY_DEFAULT_IDLE
@@ -958,10 +945,10 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         Schema.connect(
             'changed::' + this.elt + '-refresh-time',
             (schema, key) => {
-                Mainloop.source_remove(this.timeout);
+                GLib.source_remove(this.timeout);
                 this.timeout = null;
                 this.interval = l_limit(Schema.get_int(key));
-                this.timeout = Mainloop.timeout_add(
+                this.timeout = GLib.timeout_add(
                     this.interval, this.update.bind(this), GLib.PRIORITY_DEFAULT_IDLE);
             });
         Schema.connect('changed::' + this.elt + '-graph-width', this.resize.bind(this));
@@ -969,10 +956,10 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         if (this.elt === 'thermal') {
             Schema.connect('changed::thermal-threshold',
                 () => {
-                    Mainloop.source_remove(this.timeout);
+                    GLib.source_remove(this.timeout);
                     this.timeout = null;
                     this.reset_style();
-                    this.timeout = Mainloop.timeout_add(
+                    this.timeout = GLib.timeout_add(
                         this.interval, this.update.bind(this), GLib.PRIORITY_DEFAULT_IDLE);
                 });
         }
@@ -1065,7 +1052,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
     destroy() {
         TipBox.prototype.destroy.call(this);
         if (this.timeout) {
-            Mainloop.source_remove(this.timeout);
+            GLib.source_remove(this.timeout);
             this.timeout = null;
         }
     }
@@ -2246,7 +2233,7 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
     refresh() {
         // Run asynchronously, to avoid shell freeze
         try {
-            let path = Me.dir.get_path();
+            let path = this.dir.get_path();
             let script = ['/bin/bash', path + '/gpu_usage.sh'];
 
             // Create subprocess and capture STDOUT
@@ -2318,8 +2305,8 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
             this.vals = [0, 0];
             this.tip_vals = [0, 0];
         } else {
-            // we subtract percentage from memory because we do not want memory to be 
-            // "accumulated" in the chart with utilization; these two measures should be 
+            // we subtract percentage from memory because we do not want memory to be
+            // "accumulated" in the chart with utilization; these two measures should be
             // independent
             this.vals = [this.percentage, this.mem / this.total * 100 - this.percentage];
             this.tip_vals = [Math.round(this.vals[0]), this.mem];
@@ -2391,7 +2378,7 @@ const Icon = class SystemMonitor_Icon {
 function init() {
     log('[System monitor] applet init from ' + extension.path);
 
-    Convenience.initTranslations();
+
     // Get locale, needed as an argument for toLocaleString() since GNOME Shell 3.24
     // See: mozjs library bug https://bugzilla.mozilla.org/show_bug.cgi?id=999003
     Locale = GLib.get_language_names()[0];
@@ -2416,11 +2403,11 @@ function enable() {
             smdialog: new smDialog()
         };
 
-        let dialog_timeout = Mainloop.timeout_add_seconds(
+        let dialog_timeout = GLib.timeout_add_seconds(
             1,
             () => {
                 Main.__sm.smdialog.open();
-                Mainloop.source_remove(dialog_timeout);
+                GLib.source_remove(dialog_timeout);
                 return true;
             });
     } else {
@@ -2529,14 +2516,14 @@ function enable() {
                 if (isOpen) {
                     Main.__sm.pie.actor.queue_repaint();
 
-                    menu_timeout = Mainloop.timeout_add_seconds(
+                    menu_timeout = GLib.timeout_add_seconds(
                         5,
                         () => {
                             Main.__sm.pie.actor.queue_repaint();
                             return true;
                         });
                 } else {
-                    Mainloop.source_remove(menu_timeout);
+                    GLib.source_remove(menu_timeout);
                 }
             }
         );

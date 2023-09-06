@@ -1,27 +1,20 @@
-const Gtk = imports.gi.Gtk;
-const Gio = imports.gi.Gio;
-const Gdk = imports.gi.Gdk;
-const GLib = imports.gi.GLib;
+import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
+import Gdk from 'gi://Gdk';
+
 const ByteArray = imports.byteArray;
-const Config = imports.misc.config;
 
-const Gettext = imports.gettext.domain('system-monitor');
-
-let extension = imports.misc.extensionUtils.getCurrentExtension();
-let convenience = extension.imports.convenience;
-
-const _ = Gettext.gettext;
 const N_ = function (e) {
     return e;
 };
 
 let Schema;
 
-const shellMajorVersion = parseInt(Config.PACKAGE_VERSION.split('.')[0]);
+
 
 function init() {
-    convenience.initTranslations();
-    Schema = convenience.getSettings();
+
+    Schema = this.getSettings();
 }
 
 String.prototype.capitalize = function () {
@@ -140,15 +133,9 @@ function box(args = {}) {
     if (typeof args.spacing !== 'undefined') {
         options.spacing = args.spacing;
     }
-
-    if (shellMajorVersion < 40) {
-        if (args.hasBorder) {
-            options.border_width = 10;
-        }
-
         return args.horizontal ?
             new Gtk.HBox(options) : new Gtk.VBox(options);
-    }
+
 
     if (args.hasBorder) {
         options.margin_top = 10;
@@ -264,10 +251,7 @@ const SettingFrame = class SystemMonitor {
         this.hbox2 = box({horizontal: true, shouldPack: true, spacing: 20});
         this.hbox3 = box({horizontal: true, shouldPack: true, spacing: 20});
 
-        if (shellMajorVersion < 40) {
-            this.frame = new Gtk.Frame({border_width: 10});
-            this.frame.add(this.vbox);
-        } else {
+
             this.frame = new Gtk.Frame({
                 margin_top: 10,
                 margin_bottom: 10,
@@ -275,38 +259,20 @@ const SettingFrame = class SystemMonitor {
                 margin_end: 10
             });
             this.frame.set_child(this.vbox);
-        }
 
 
-        if (shellMajorVersion < 40) {
-            this.vbox.pack_start(this.hbox0, true, false, 0);
-            this.vbox.pack_start(this.hbox1, true, false, 0);
-            this.vbox.pack_start(this.hbox2, true, false, 0);
-            this.vbox.pack_start(this.hbox3, true, false, 0);
-        } else {
+
+
             this.vbox.append(this.hbox0);
             this.vbox.append(this.hbox1);
             this.vbox.append(this.hbox2);
             this.vbox.append(this.hbox3);
-        }
+
     }
 
     /** Enforces child ordering of first 2 boxes by label */
     _reorder() {
-        if (shellMajorVersion < 40) {
-            /** @return {string} label of/inside component */
-            const labelOf = el => {
-                if (el.get_children) {
-                    return labelOf(el.get_children()[0]);
-                }
-                return el && el.label || '';
-            };
-            [this.hbox0, this.hbox1].forEach(hbox => {
-                hbox.get_children()
-                    .sort((c1, c2) => labelOf(c1).localeCompare(labelOf(c2)))
-                    .forEach((child, index) => hbox.reorder_child(child, index));
-            });
-        } else {
+
             /** @return {string} label of/inside component */
             const labelOf = el => {
                 if (el.get_label) {
@@ -332,7 +298,7 @@ const SettingFrame = class SystemMonitor {
                         hbox.reorder_child_after(child, sorted[index - 1] || null);
                     });
             });
-        }
+
     }
 
     add(key) {
@@ -376,11 +342,8 @@ const SettingFrame = class SystemMonitor {
         } else if (config.match(/-color$/)) {
             let item = new ColorSelect(_(config.split('-')[0].capitalize()));
             item.set_value(this.schema.get_string(key));
-            if (shellMajorVersion < 40) {
-                this.hbox2.pack_end(item.actor, true, false, 0);
-            } else {
-                this.hbox2.append(item.actor);
-            }
+            this.hbox2.append(item.actor);
+
             item.picker.connect('color-set', function (color) {
                 set_color(color, Schema, key);
             });
@@ -401,13 +364,7 @@ const SettingFrame = class SystemMonitor {
             }
             // this.hbox3.add(item.actor);
             if (configParent === 'fan') {
-                if (shellMajorVersion < 40) {
-                    this.hbox2.pack_end(item.actor, true, false, 0);
-                } else {
-                    this.hbox2.append(item.actor);
-                }
-            } else if (shellMajorVersion < 40) {
-                this.hbox2.pack_start(item.actor, true, false, 0);
+                this.hbox2.append(item.actor);
             } else {
                 this.hbox2.prepend(item.actor);
             }
@@ -435,11 +392,9 @@ const SettingFrame = class SystemMonitor {
             let item = new Select(_('Usage Style'));
             item.add([_('pie'), _('bar'), _('none')]);
             item.set_value(this.schema.get_enum(key));
-            if (shellMajorVersion < 40) {
-                this.hbox3.pack_end(item.actor, false, false, 20);
-            } else {
-                this.hbox3.append(item.actor);
-            }
+
+            this.hbox3.append(item.actor);
+
 
             item.selector.connect('changed', function (style) {
                 set_enum(style, Schema, key);
@@ -486,11 +441,9 @@ const App = class SystemMonitor_App {
             hasBorder: true, horizontal: false, spacing: 10});
         this.hbox1 = box({
             hasBorder: true, horizontal: true, shouldPack: true, spacing: 20});
-        if (shellMajorVersion < 40) {
-            this.main_vbox.pack_start(this.hbox1, false, false, 0);
-        } else {
+
             this.main_vbox.prepend(this.hbox1);
-        }
+
 
         keys.forEach((key) => {
             if (key === 'icon-display') {
@@ -529,11 +482,8 @@ const App = class SystemMonitor_App {
                 let item = new ColorSelect(_('Background Color'))
                 item.set_value(Schema.get_string(key))
                 this.items.push(item)
-                if (shellMajorVersion < 40) {
-                    this.hbox1.pack_start(item.actor, true, false, 0)
-                } else {
-                    this.hbox1.prepend(item.actor)
-                }
+                this.hbox1.prepend(item.actor)
+
                 item.picker.connect('color-set', function (color) {
                     set_color(color, Schema, key);
                 });
@@ -558,16 +508,11 @@ const App = class SystemMonitor_App {
         setting_items.forEach((setting) => {
             this.notebook.append_page(this.settings[setting].frame, this.settings[setting].label)
             this.notebook.set_tab_reorderable(this.settings[setting].frame, true);
-            if (shellMajorVersion < 40) {
-                this.main_vbox.show_all();
-                this.main_vbox.pack_start(this.notebook, true, true, 0)
-            } else {
-                this.main_vbox.append(this.notebook);
-            }
+
+            this.main_vbox.append(this.notebook);
+
         });
-        if (shellMajorVersion < 40) {
-            this.main_vbox.show_all();
-        }
+
     }
 }
 
