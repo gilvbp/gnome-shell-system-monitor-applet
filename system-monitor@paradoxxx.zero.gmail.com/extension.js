@@ -30,7 +30,7 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
-import St from 'gi://Gio';
+import St from 'gi://St';
 import UPower from 'gi://UPowerGlib';
 import GTop from 'gi://GTop';
 import Gio from 'gi://Gio';
