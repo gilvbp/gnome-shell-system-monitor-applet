@@ -22,7 +22,7 @@
  * by loading the new libnm.so. Should go away eventually */
 
 //var libnm_glib = imports.gi.GIRepository.Repository.get_default().is_registered('NMClient', '1.0');
-import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as NM from 'gi://NM';
 const NetworkManager = NM;
@@ -33,20 +33,26 @@ import Shell from 'gi://Shell';
 import St from 'gi://Gio';
 import UPower from 'gi://UPowerGlib';
 import GTop from 'gi://GTop';
+import Gio from 'gi://Gio';
+
+
+import Gettext from 'gettext';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
-import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Panel from 'resource:///org/gnome/shell/ui/panel.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+const text = Gettext.domain('system-monitor');
+
 var ByteArray = imports.byteArray;
 
-import * as Compat from './compat.js';
+import { colorFromString } from './compat.js';
 
 var smDepsGtop = true;
 var smDepsNM = true;
 var Background, IconSize, Locale, MountsMonitor, Schema, StatusArea, Style, gc_timeout, menu_timeout;
-var MESSAGE = '';
+
 
 export default class SystemMonitorExtension extends Extension {
     enable() {
@@ -58,7 +64,7 @@ export default class SystemMonitorExtension extends Extension {
         Style = new smStyleManager();
         MountsMonitor = new smMountsMonitor();
 
-        Background = color_from_string(Schema.get_string('background'));
+        Background = colorFromString(Schema.get_string('background'));
 
         if (!(smDepsGtop && smDepsNM)) {
             Main.__sm = {
@@ -131,7 +137,7 @@ export default class SystemMonitorExtension extends Extension {
             }
 
             Schema.connect('changed::background', (schema, key) => {
-                Background = color_from_string(Schema.get_string(key));
+                Background = colorFromString(Schema.get_string(key));
             });
             Main.panel._addToPanelBox('system-monitor', tray, 1, panel);
 
@@ -195,13 +201,13 @@ export default class SystemMonitorExtension extends Extension {
                 _gsmPrefs = _appSys.lookup_app('org.gnome.Extensions.desktop');
             }
             let item;
-            item = new PopupMenu.PopupMenuItem(_('System Monitor...'));
+            item = new PopupMenu.PopupMenuItem(text.gettext('System Monitor...'));
             item.connect('activate', () => {
                 _gsmApp.activate();
             });
             tray.menu.addMenuItem(item);
 
-            item = new PopupMenu.PopupMenuItem(_('Preferences...'));
+            item = new PopupMenu.PopupMenuItem(text.gettext('Preferences...'));
             item.connect('activate', () => {
                 if (typeof ExtensionUtils.openPrefs === 'function') {
                     ExtensionUtils.openPrefs();
@@ -245,7 +251,7 @@ export default class SystemMonitorExtension extends Extension {
             Style = null;
         }
 
-        Schema.run_dispose();
+        //Schema.run_dispose();
         for (let eltName in Main.__sm.elts) {
             Main.__sm.elts[eltName].destroy();
         }
@@ -261,7 +267,7 @@ export default class SystemMonitorExtension extends Extension {
     }
 }
 
-const MESSAGE = _('Dependencies Missing\n\
+const MESSAGE = text.gettext('Dependencies Missing\n\
 Please install: \n\
 gnome-system-monitor and libgtop, clutter and Network Manager gir bindings \n\
 \t    on Debian and Ubuntu: gir1.2-gtop-2.0, gir1.2-nm-1.0, gir1.2-clutter-1.0, gnome-system-monitor \n\
@@ -275,13 +281,13 @@ const smStyleManager = class SystemMonitor_smStyleManager {
     constructor() {
         this._extension = '';
         this._iconsize = 1;
-        this._diskunits = _('MiB/s');
-        this._netunits_kbytes = _('KiB/s');
-        this._netunits_mbytes = _('MiB/s');
-        this._netunits_gbytes = _('GiB/s');
-        this._netunits_kbits = _('kbit/s');
-        this._netunits_mbits = _('Mbit/s');
-        this._netunits_gbits = _('Gbit/s');
+        this._diskunits = text.gettext('MiB/s');
+        this._netunits_kbytes = text.gettext('KiB/s');
+        this._netunits_mbytes = text.gettext('MiB/s');
+        this._netunits_gbytes = text.gettext('GiB/s');
+        this._netunits_kbits = text.gettext('kbit/s');
+        this._netunits_mbits = text.gettext('Mbit/s');
+        this._netunits_gbits = text.gettext('Gbit/s');
         this._pie_size = 300;
         this._pie_fontsize = 14;
         this._bar_width = 300;
@@ -292,10 +298,10 @@ const smStyleManager = class SystemMonitor_smStyleManager {
         if (this._compact) {
             this._extension = '-compact';
             this._iconsize = 3 / 5;
-            this._diskunits = _('MB');
-            this._netunits_kbytes = _('kB');
-            this._netunits_mbytes = _('MB');
-            this._netunits_gbytes = _('GB');
+            this._diskunits = text.gettext('MB');
+            this._netunits_kbytes = text.gettext('kB');
+            this._netunits_mbytes = text.gettext('MB');
+            this._netunits_gbytes = text.gettext('GB');
             this._netunits_kbits = 'kb';
             this._netunits_mbits = 'Mb';
             this._netunits_gbits = 'Gb';
@@ -387,7 +393,7 @@ const smDialog = GObject.registerClass(
 
             this._subjectLabel = new St.Label({
                 style_class: 'prompt-dialog-headline',
-                text: _('System Monitor Extension')
+                text: text.gettext('System Monitor Extension')
             });
 
             messageBox.add(this._subjectLabel,
@@ -410,7 +416,7 @@ const smDialog = GObject.registerClass(
 
             this.setButtons([
                 {
-                    label: _('Cancel'),
+                    label: text.gettext('Cancel'),
                     action: () => {
                         this.close();
                     },
@@ -664,7 +670,7 @@ const Graph = class SystemMonitor_Graph {
         this.gtop = new GTop.glibtop_fsusage();
         this.colors = ['#888', '#aaa', '#ccc'];
         for (let color in this.colors) {
-            this.colors[color] = color_from_string(this.colors[color]);
+            this.colors[color] = colorFromString(this.colors[color]);
         }
 
         let themeContext = St.ThemeContext.get_for_stage(global.stage);
@@ -1002,7 +1008,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
     constructor(properties) {
         super();
         this.elt = '';
-        this.item_name = _('');
+        this.item_name = text.gettext('');
         this.color_name = [];
         this.text_items = [];
         this.menu_items = [];
@@ -1019,9 +1025,9 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         this.colors = [];
         for (let color in this.color_name) {
             let name = this.elt + '-' + this.color_name[color] + '-color';
-            let clutterColor = color_from_string(Schema.get_string(name));
+            let clutterColor = colorFromString(Schema.get_string(name));
             Schema.connect('changed::' + name, (schema, key) => {
-                this.clutterColor = color_from_string(Schema.get_string(key));
+                this.clutterColor = colorFromString(Schema.get_string(key));
             });
             Schema.connect('changed::' + name, () => {
                 this.chart.actor.queue_repaint();
@@ -1075,7 +1081,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         }
 
         this.label = new St.Label({
-            text: this.elt === 'memory' ? _('mem') : _(this.elt),
+            text: this.elt === 'memory' ? text.gettext('mem') : text.gettext(this.elt),
             style_class: Style.get('sm-status-label')
         });
         change_text.call(this);
@@ -1112,7 +1118,7 @@ const ElementBase = class SystemMonitor_ElementBase extends TipBox {
         for (let i = 0; i < this.color_name.length; i++) {
             let tipline = new TipItem();
             this.tipmenu.addMenuItem(tipline);
-            tipline.actor.add(new St.Label({text: _(this.color_name[i])}));
+            tipline.actor.add(new St.Label({text: text.gettext(this.color_name[i])}));
             this.tip_labels[i] = new St.Label({text: ''});
             tipline.actor.add(this.tip_labels[i]);
 
@@ -1180,7 +1186,7 @@ const Battery = class SystemMonitor_Battery extends ElementBase {
     constructor() {
         super({
             elt: 'battery',
-            item_name: _('Battery'),
+            item_name: text.gettext('Battery'),
             color_name: ['batt0'],
             icon: '. GThemedIcon battery-good-symbolic battery-good'
         });
@@ -1271,7 +1277,7 @@ const Battery = class SystemMonitor_Battery extends ElementBase {
             let time = Math.round(seconds / 60);
             let minutes = time % 60;
             let hours = Math.floor(time / 60);
-            this.timeString = C_('battery time remaining', '%d:%02d').format(hours, minutes);
+            this.timeString = Ctext.gettext('battery time remaining', '%d:%02d').format(hours, minutes);
         } else {
             this.timeString = '-- ';
         }
@@ -1396,7 +1402,7 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
     constructor(cpuid) {
         super({
             elt: 'cpu',
-            item_name: _('CPU'),
+            item_name: text.gettext('CPU'),
             color_name: ['user', 'system', 'nice', 'iowait', 'other'],
             cpuid: -1 // cpuid is -1 when all cores are displayed in the same graph
         });
@@ -1417,7 +1423,7 @@ const Cpu = class SystemMonitor_Cpu extends ElementBase {
         }
         this.last_total = 0;
         this.usage = [0, 0, 0, 1, 0];
-        this.item_name = _('Cpu');
+        this.item_name = text.gettext('Cpu');
         if (cpuid !== -1) {
             this.item_name += ' ' + (cpuid + 1);
         } // append cpu number to cpu name in popup
@@ -1576,7 +1582,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
     constructor() {
         super({
             elt: 'disk',
-            item_name: _('Disk'),
+            item_name: text.gettext('Disk'),
             color_name: ['read', 'write']
         });
         this.mounts = MountsMonitor.get_mounts();
@@ -1584,7 +1590,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
         this.last = [0, 0];
         this.usage = [0, 0];
         this.last_time = 0;
-        this.tip_format(_('MiB/s'));
+        this.tip_format(text.gettext('MiB/s'));
         this.update();
     }
 
@@ -1639,7 +1645,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
     create_text_items() {
         return [
             new St.Label({
-                text: _('R'),
+                text: text.gettext('R'),
                 style_class: Style.get('sm-status-label')
             }),
             new St.Label({
@@ -1653,7 +1659,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
                 y_align: Clutter.ActorAlign.CENTER
             }),
             new St.Label({
-                text: _('W'),
+                text: text.gettext('W'),
                 style_class: Style.get('sm-status-label')
             }),
             new St.Label({
@@ -1680,7 +1686,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
-                text: ' ' + _('R'),
+                text: ' ' + text.gettext('R'),
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
@@ -1692,7 +1698,7 @@ const Disk = class SystemMonitor_Disk extends ElementBase {
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
-                text: ' ' + _('W'),
+                text: ' ' + text.gettext('W'),
                 style_class: Style.get('sm-label')
             })
         ];
@@ -1703,7 +1709,7 @@ const Freq = class SystemMonitor_Freq extends ElementBase {
     constructor() {
         super({
             elt: 'freq',
-            item_name: _('Freq'),
+            item_name: text.gettext('Freq'),
             color_name: ['freq']
         });
         this.freq = 0;
@@ -1783,7 +1789,7 @@ const Mem = class SystemMonitor_Mem extends ElementBase {
     constructor() {
         super({
             elt: 'memory',
-            item_name: _('Memory'),
+            item_name: text.gettext('Memory'),
             color_name: ['program', 'buffer', 'cache']
         });
         this.max = 1;
@@ -1873,9 +1879,9 @@ const Mem = class SystemMonitor_Mem extends ElementBase {
     }
 
     create_menu_items() {
-        let unit = _('MiB');
+        let unit = text.gettext('MiB');
         if (this.useGiB) {
-            unit = _('GiB');
+            unit = text.gettext('GiB');
         }
         return [
             new St.Label({
@@ -1906,7 +1912,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
     constructor() {
         super({
             elt: 'net',
-            item_name: _('Net'),
+            item_name: text.gettext('Net'),
             color_name: ['down', 'downerrors', 'up', 'uperrors', 'collisions']
         });
         this.speed_in_bits = false;
@@ -1930,7 +1936,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
         this.last = [0, 0, 0, 0, 0];
         this.usage = [0, 0, 0, 0, 0];
         this.last_time = 0;
-        this.tip_format([_('KiB/s'), '/s', _('KiB/s'), '/s', '/s']);
+        this.tip_format([text.gettext('KiB/s'), '/s', text.gettext('KiB/s'), '/s', '/s']);
         this.update_units();
         Schema.connect('changed::' + this.elt + '-speed-in-bits', this.update_units.bind(this));
         try {
@@ -2003,51 +2009,51 @@ const Net = class SystemMonitor_Net extends ElementBase {
             this.tip_vals[2] = Math.round(this.tip_vals[2] * 8.192);
             if (this.tip_vals[0] < 1000) {
                 this.text_items[2].text = Style.netunits_kbits();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('kbit/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('kbit/s');
             } else if (this.tip_vals[0] < 1000000) {
                 this.text_items[2].text = Style.netunits_mbits();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('Mbit/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('Mbit/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1000).toPrecision(3);
             } else {
                 this.text_items[2].text = Style.netunits_gbits();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('Gbit/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('Gbit/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1000000).toPrecision(3);
             }
             if (this.tip_vals[2] < 1000) {
                 this.text_items[5].text = Style.netunits_kbits();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('kbit/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('kbit/s');
             } else if (this.tip_vals[2] < 1000000) {
                 this.text_items[5].text = Style.netunits_mbits();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('Mbit/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('Mbit/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1000).toPrecision(3);
             } else {
                 this.text_items[5].text = Style.netunits_gbits();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('Gbit/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('Gbit/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1000000).toPrecision(3);
             }
         } else {
             if (this.tip_vals[0] < 1024) {
                 this.text_items[2].text = Style.netunits_kbytes();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('KiB/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('KiB/s');
             } else if (this.tip_vals[0] < 1048576) {
                 this.text_items[2].text = Style.netunits_mbytes();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('MiB/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('MiB/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1024).toPrecision(3);
             } else {
                 this.text_items[2].text = Style.netunits_gbytes();
-                this.menu_items[1].text = this.tip_unit_labels[0].text = _('GiB/s');
+                this.menu_items[1].text = this.tip_unit_labels[0].text = text.gettext('GiB/s');
                 this.tip_vals[0] = (this.tip_vals[0] / 1048576).toPrecision(3);
             }
             if (this.tip_vals[2] < 1024) {
                 this.text_items[5].text = Style.netunits_kbytes();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('KiB/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('KiB/s');
             } else if (this.tip_vals[2] < 1048576) {
                 this.text_items[5].text = Style.netunits_mbytes();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('MiB/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('MiB/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1024).toPrecision(3);
             } else {
                 this.text_items[5].text = Style.netunits_gbytes();
-                this.menu_items[4].text = this.tip_unit_labels[2].text = _('GiB/s');
+                this.menu_items[4].text = this.tip_unit_labels[2].text = text.gettext('GiB/s');
                 this.tip_vals[2] = (this.tip_vals[2] / 1048576).toPrecision(3);
             }
         }
@@ -2073,7 +2079,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 y_align: Clutter.ActorAlign.CENTER
             }),
             new St.Label({
-                text: _('KiB/s'),
+                text: text.gettext('KiB/s'),
                 style_class: Style.get('sm-net-unit-label'),
                 y_align: Clutter.ActorAlign.CENTER
             }),
@@ -2087,7 +2093,7 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 y_align: Clutter.ActorAlign.CENTER
             }),
             new St.Label({
-                text: _('KiB/s'),
+                text: text.gettext('KiB/s'),
                 style_class: Style.get('sm-net-unit-label'),
                 y_align: Clutter.ActorAlign.CENTER
             })
@@ -2101,11 +2107,11 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 style_class: Style.get('sm-value')
             }),
             new St.Label({
-                text: _('KiB/s'),
+                text: text.gettext('KiB/s'),
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
-                text: _(' ↓'),
+                text: text.gettext(' ↓'),
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
@@ -2113,11 +2119,11 @@ const Net = class SystemMonitor_Net extends ElementBase {
                 style_class: Style.get('sm-value')
             }),
             new St.Label({
-                text: _(' KiB/s'),
+                text: text.gettext(' KiB/s'),
                 style_class: Style.get('sm-label')
             }),
             new St.Label({
-                text: _(' ↑'),
+                text: text.gettext(' ↑'),
                 style_class: Style.get('sm-label')
             })
         ];
@@ -2128,7 +2134,7 @@ const Swap = class SystemMonitor_Swap extends ElementBase {
     constructor() {
         super({
             elt: 'swap',
-            item_name: _('Swap'),
+            item_name: text.gettext('Swap'),
             color_name: ['used']
         });
         this.max = 1;
@@ -2231,7 +2237,7 @@ const Swap = class SystemMonitor_Swap extends ElementBase {
                 style_class: Style.get('sm-value')
             }),
             new St.Label({
-                text: _(unit),
+                text: text.gettext(unit),
                 style_class: Style.get('sm-label')
             })
         ];
@@ -2242,12 +2248,12 @@ const Thermal = class SystemMonitor_Thermal extends ElementBase {
     constructor() {
         super({
             elt: 'thermal',
-            item_name: _('Thermal'),
+            item_name: text.gettext('Thermal'),
             color_name: ['tz0']
         });
         this.max = 100;
 
-        this.item_name = _('Thermal');
+        this.item_name = text.gettext('Thermal');
         this.temperature = '-- ';
         this.fahrenheit_unit = Schema.get_boolean(this.elt + '-fahrenheit-unit');
         this.display_error = true;
@@ -2278,7 +2284,7 @@ const Thermal = class SystemMonitor_Thermal extends ElementBase {
         this.vals = [this.temperature];
         this.tip_vals[0] = this.temperature_text();
         this.text_items[1].text = this.menu_items[1].text = this.temperature_symbol();
-        this.tip_unit_labels[0].text = _(this.temperature_symbol());
+        this.tip_unit_labels[0].text = text.gettext(this.temperature_symbol());
     }
 
     create_text_items() {
@@ -2326,12 +2332,12 @@ const Fan = class SystemMonitor_Fan extends ElementBase {
     constructor() {
         super({
             elt: 'fan',
-            item_name: _('Fan'),
+            item_name: text.gettext('Fan'),
             color_name: ['fan0']
         });
         this.rpm = 0;
         this.display_error = true;
-        this.tip_format(_('rpm'));
+        this.tip_format(text.gettext('rpm'));
         Schema.connect('changed::' + this.elt + '-sensor-file', this.refresh.bind(this));
         this.update();
     }
@@ -2365,7 +2371,7 @@ const Fan = class SystemMonitor_Fan extends ElementBase {
                 y_align: Clutter.ActorAlign.CENTER
             }),
             new St.Label({
-                text: _('rpm'), style_class: Style.get('sm-unit-label'),
+                text: text.gettext('rpm'), style_class: Style.get('sm-unit-label'),
                 y_align: Clutter.ActorAlign.CENTER
             })
         ];
@@ -2378,12 +2384,13 @@ const Fan = class SystemMonitor_Fan extends ElementBase {
                 style_class: Style.get('sm-value')
             }),
             new St.Label({
-                text: _('rpm'),
+                text: text.gettext('rpm'),
                 style_class: Style.get('sm-label')
             })
         ];
     }
 }
+
 
 const Gpu = class SystemMonitor_Gpu extends ElementBase {
     constructor() {
@@ -2400,7 +2407,6 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
         this.tip_format();
         this.update();
     }
-
     _unit(total) {
         this.total = total;
         let threshold = 4 * 1024; // In MiB
@@ -2412,16 +2418,29 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
             this._unitConversion *= 1024 / this._decimals;
         }
     }
+    refresh() {
+        // Run asynchronously, to avoid shell freeze
+        try {
+            let path = Me.dir.get_path();
+            let script = ['/bin/bash', path + '/gpu_usage.sh'];
 
+            // Create subprocess and capture STDOUT
+            let proc = new Gio.Subprocess({argv: script, flags: Gio.SubprocessFlags.STDOUT_PIPE});
+            proc.init(null);
+            // Asynchronously call the output handler when script output is ready
+            //proc.communicate_utf8_async(null, null, this.bind(this, this._handleOutput));
+        } catch (err) {
+            global.logError(err.message);
+        }
+    }
     _handleOutput(proc, result) {
-        let [ok, output,] = proc.communicate_utf8_finish(result);
+        let [ok, output, ] = proc.communicate_utf8_finish(result);
         if (ok) {
             this._readTemperature(output);
         } else {
             global.logError('gpu_usage.sh invocation failed');
         }
     }
-
     _sanitizeUsageValue(val) {
         val = parseInt(val);
         if (isNaN(val)) {
@@ -2429,7 +2448,6 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
         }
         return val;
     }
-
     _readTemperature(procOutput) {
         let usage = procOutput.split('\n');
         let memTotal = this._sanitizeUsageValue(usage[0]);
@@ -2450,7 +2468,6 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
             this.total = Math.round(memTotal / this._unitConversion);
         }
     }
-
     _pad(number) {
         if (this.useGiB) {
             if (number < 1) {
@@ -2463,7 +2480,6 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
 
         return number;
     }
-
     _update_unit() {
         let unit = _('MiB');
         if (this.useGiB) {
@@ -2471,7 +2487,6 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
         }
         this.menu_items[4].text = unit;
     }
-
     _apply() {
         this.tip_unit_labels[1].text = "/ " + this.total + " " + this.menu_items[4].text;
         if (this.total === 0) {
@@ -2495,22 +2510,18 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
                 '/' + this._pad(this.total).toLocaleString(Locale);
         }
     }
-
     create_text_items() {
         return [
             new St.Label({
                 text: '',
                 style_class: Style.get('sm-status-value'),
-                y_align: Clutter.ActorAlign.CENTER
-            }),
+                y_align: Clutter.ActorAlign.CENTER}),
             new St.Label({
                 text: '%',
                 style_class: Style.get('sm-perc-label'),
-                y_align: Clutter.ActorAlign.CENTER
-            })
+                y_align: Clutter.ActorAlign.CENTER})
         ];
     }
-
     create_menu_items() {
         let unit = _('MiB');
         if (this.useGiB) {
@@ -2519,24 +2530,19 @@ const Gpu = class SystemMonitor_Gpu extends ElementBase {
         return [
             new St.Label({
                 text: '',
-                style_class: Style.get('sm-value')
-            }),
+                style_class: Style.get('sm-value')}),
             new St.Label({
                 text: '%',
-                style_class: Style.get('sm-label')
-            }),
+                style_class: Style.get('sm-label')}),
             new St.Label({
                 text: '',
-                style_class: Style.get('sm-label')
-            }),
+                style_class: Style.get('sm-label')}),
             new St.Label({
                 text: '',
-                style_class: Style.get('sm-value')
-            }),
+                style_class: Style.get('sm-value')}),
             new St.Label({
                 text: unit,
-                style_class: Style.get('sm-label')
-            })
+                style_class: Style.get('sm-label')})
         ];
     }
 }
@@ -2662,7 +2668,7 @@ function change_usage() {
     Main.__sm.pie.show(usage === 'pie');
     Main.__sm.bar.show(usage === 'bar');
 }
-let color_from_string = Compat.color_from_string;
+
 
 function interesting_mountpoint(mount) {
     if (mount.length < 3) {
